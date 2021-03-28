@@ -313,7 +313,7 @@ d3.csv('data.csv')
 // Third part:
 var barWidth = 700;
 var barHeight = 500;
-var barMargin = 20;
+var barMargin = 40;
 
 const barBounded = {
     width: barWidth - barMargin * 2,
@@ -379,7 +379,7 @@ function drawBarChart(mode, dataset) {
             .tickFormat(function(d) { return newData[d].key; });
         const yAxis = d3.axisRight(yBarScale)
 
-        const smallBarWidth = 5;
+        const smallBarWidth = 40;
 
         group.selectAll('whatever')
             .data(newData)
@@ -400,7 +400,7 @@ function drawBarChart(mode, dataset) {
         group.append('g')
             .attr('class', 'x axis')    // TODO: add this x axis.
             .call(xAxis)
-            .style('transform', `translateY(${barBounded.height}px)`)
+            .style('transform', `translate(20px,${barBounded.height}px)`)
 
         group.append('g')
             .attr('class', 'y axis') // TODO: add this y axis.
