@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<!-- Command line to run:
+    `http-server`
+    Then go to `http://localhost:8080/spotify.html` for viewing visualization.
+ -->
+<html lang="en">
+    <head>
+        <title>Type A Spotify Analysis</title>
+        <script src="https://d3js.org/d3.v6.js"></script>
+
+        <style>
+/* Dropdown Button */
+.dropbtn {
+  background-color: #3498DB;
+  color: white;
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+}
+
+/* Dropdown button on hover & focus */
+.dropbtn:hover, .dropbtn:focus {
+  background-color: #2980B9;
+}
+
+/* The container <div> - needed to position the dropdown content */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Links inside the dropdown */
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content p:hover {background-color: #ddd}
+
+/* Show the dropdown menu (use JS to add this class to the .dropdown-content container when the user clicks on the dropdown button) */
+.show {display:block;}
+        </style>
+    </head>
+
+    <body>
+        <div>
+            <h2>Popularity VS other attributes<j2>
+        </div>
+        <div class="dropdown">
+            <label>Choose attribute:</label>
+            <button id="dropdownButton" onclick="changeAttribute()" class="dropbtn">Dropdown</button>
+            <div id="attributeDropdown" class="dropdown-content">
+                <p onclick="updateAttribute('acousticness')">acousticness</p>
+                <p onclick="updateAttribute('danceability')">danceability</p>
+                <p onclick="updateAttribute('energy')">energy</p>
+                <p onclick="updateAttribute('instrumentalness')">instrumentalness</p>
+                <p onclick="updateAttribute('liveness')">liveness</p>
+                <p onclick="updateAttribute('speechiness')">speechiness</p>
+                <p onclick="updateAttribute('valence')">valence</p>
+
+                <p onclick="updateAttribute('tempo')">tempo</p>
+                <p onclick="updateAttribute('year')">year</p>
+                <p onclick="updateAttribute('key')">key</p>
+                <p onclick="updateAttribute('loudness')">loudness</p>
+                <p onclick="updateAttribute('mode')">mode</p>
+                <p onclick="updateAttribute('duration_ms')">duration_ms</p>
+                <p onclick="updateAttribute('explicit')">explicit</p>
+            </div>
+        </div>
+        <div id="maxWrapper" style="display: none">
+            <label>Set max: </label>
+            <input type="text" id="max" />
+            <button onclick="updateAttribute('duration_ms')">Update</button>
+        </div>
+        <div id="mainDiv"></div>
+
+        <div>
+            <h2>Mode</h2>
+        </div>
+        <div id="modeDiv"></div>
+
+        <div>
+            <h2>Key VS Mode</h2>
+        </div>
+        <div>
+            <button onclick="chooseMode('major')" id="majorMode">Major</button>
+            <button onclick="chooseMode('minor')" id="minorMode">Minor</button>
+        </div>
+        <div id="barDiv"></div>
+    </body>
+
+    <script type="text/javascript">
+// SVG manipulation.
+const width = 700;
+const height = 600;
+
+const margins = {
+    top: 20,
+    bottom: 20,
+    left: 20,
+    right: 20
+};
+
+const bounded = {
+    width: width - margins.left - margins.right,
+    height: height - margins.top - margins.bottom
+};
+
+const wrapper = d3.select('#mainDiv');
+const svg = wrapper.append('svg');
+svg.attr('width', width);
+svg.attr('height', height);
+
+function updatePopularityLinearGraph(attribute, dataset, max=0) {
+    svg.selectAll("*").remove();
+
+    const group = svg.append('g') // append a group for our visualisations
+        .style('transform', `translate(${margins.left}px, ${margins.top}px)`); // bounded
+
+    // d3.csv('data.csv')
+    // .then((dataset) => {
+        const xMin = d3.min(dataset, (d) => parseFloat(d[attribute]));
+        const xMax = max == 0 
+            ? d3.max(dataset, (d) => parseFloat(d[attribute]))
+            : max;
+        // console.log("attribute: " + attribute + " xmin: " + xMin + " xmax: " + xMax);
+        const xScale = d3.scaleLinear()
+            .domain([xMin, xMax])
+            .range([margins.left, bounded.width]);
+
+        const yScale = d3.scaleLinear()
+              .domain([d3.min(dataset, (d) => d['popularity']),
+                      d3.max(dataset, (d) => d['popularity'])])
+              .range([bounded.height, margins.bottom]);
+        
+        const xAxis = d3.axisBottom(xScale);
+        const yAxis = d3.axisLeft(yScale);
+        
+        group.selectAll('circle')
+            .data(dataset)
+            .enter()
+            .append('circle')
+            .attr('cx', d => (xScale(parseFloat(d[attribute]))))
+            .attr('cy', d => (yScale(d['popularity'])))
+            .attr('r', 1)
+            .style('fill', 'blue');
+
+        // Add axes.
+        group.append('g')
+            .attr('transform', `translate(0, ${bounded.height})`)
+            .call(xAxis);
+        group.append('g')
+            .attr('transform', `translate(${margins.top},0)`)
+            .call(yAxis);
+    // });
+}
+
+
+// DOM manipulations:
+
+function changeAttribute() {
+  document.getElementById("attributeDropdown").classList.toggle("show");
+}
+
+// Close the dropdown menu if the user clicks outside of it
+window.onclick = function(event) {
+  if (!event.target.matches('.dropbtn')) {
+    var dropdowns = document.getElementsByClassName("dropdown-content");
+    var i;
+    for (i = 0; i < dropdowns.length; i++) {
+      var openDropdown = dropdowns[i];
+      if (openDropdown.classList.contains('show')) {
+        openDropdown.classList.remove('show');
+      }
+    }
+  }
+}
+
+function updateAttribute(attribute) {
+    d3.csv('data.csv')
+    .then((dataset) => {
+        document.getElementById("dropdownButton").innerText = attribute;
+        let max = 0;
+        if (attribute === "duration_ms") {
+            document.getElementById("maxWrapper").style.display = "block";
+            max = parseInt(document.getElementById("max").value);
+        } else {
+            document.getElementById("maxWrapper").style.display = "none";
+        }
+        if (max) {
+            updatePopularityLinearGraph(attribute, dataset, max);
+        } else {
+            updatePopularityLinearGraph(attribute, dataset);
+        }
+    });
+}
+
+// First part default attribute to `acousticness`:
+updateAttribute("acousticness");
+
+// Second part:
+var piWidth = 700;
+var piHeight = 500;
+var piMargin = 50;
+var piRadius = Math.min(piWidth, piHeight) / 2 - piMargin
+
+// append the svg object to the div called 'my_dataviz'
+var piSvg = d3.select("#modeDiv")
+  .append("svg")
+    .attr("width", piWidth)
+    .attr("height", piHeight)
+  .append("g")
+    .attr("transform", "translate(" + piWidth / 2 + "," + piHeight / 2 + ")");
+
+d3.csv('data.csv')
+.then((dataset) => {
+    const majorCount = dataset.reduce(function(count, entry) { 
+        return count + (entry['mode'] === '1' ? 1 : 0);
+    }, 0);
+    const minorCount = dataset.reduce(function(count, entry) { 
+        return count + (entry['mode'] === '0' ? 1 : 0);
+    }, 0);
+    const totalCount = majorCount + minorCount;
+    const data = [
+        {count: majorCount, label: "major"}, 
+        {count: minorCount, label: "minor"}];
+    const labels = data.map(x => x.label);
+
+    var color = d3.scaleOrdinal()
+      .domain(labels)
+      .range(["#98abc5", "#8a89a6"]);
+
+    // Compute the position of each group on the pie:
+    var pie = d3.pie()
+      .value(function(d) {
+        return d.count;
+      });
+    var data_ready = pie(data);
+
+    var arc = d3.arc()
+      .innerRadius(piRadius - 130)
+      .outerRadius(piRadius - 10);
+
+    piSvg
+      .selectAll('whatever')
+      .data(data_ready)
+      .enter()
+      .append('path')
+      .attr('d', d3.arc()
+        .innerRadius(0)
+        .outerRadius(piRadius)
+      )
+      .attr('fill', function(d){ return(color(d.data.label)) })
+      .attr("stroke", "black")
+      .style("stroke-width", "2px")
+      .style("opacity", 0.7);
+
+    var piLegend = piSvg.selectAll("whatever")
+      .data(data_ready)
+      .enter().append("g")
+      .attr("class", "labels");
+
+    // Append text labels to each arc
+    piLegend.append("text")
+      .attr("transform", function(d) {
+        return "translate(" + arc.centroid(d) + ")";
+      })
+      .style("text-anchor", "middle")
+      .attr("fill", "#fff")
+      .style("font-size", 20)
+      .text(function(d){
+        return d.data.label + "  " + d.value;
+      });
+    
+    var legendG = piSvg.selectAll("whatever")
+      .data(data_ready)
+      .enter().append("g")
+      .attr("transform", function(d, i){
+        return "translate(" + (piRadius + 5) + "," + (i * 15 + 20) + ")";
+      })
+      .attr("class", "legend");   
+    
+    legendG.append("rect")
+      .attr("width", 10)
+      .attr("height", 10)
+      .attr("fill", function(d) {
+        return color(d.data.label);
+      });
+    
+    legendG.append("text")
+      .text(function(d){
+        return d.data.label + "  " + d.value + "(" + (d.value * 100.0 / totalCount).toFixed(2) + "%)";
+      })
+      .style("font-size", 12)
+      .attr("y", 10)
+      .attr("x", 11);
+});
+
+// Third part:
+var barWidth = 700;
+var barHeight = 500;
+var barMargin = 20;
+
+const barBounded = {
+    width: barWidth - barMargin * 2,
+    height: barHeight - barMargin * 2
+}
+
+// Data object with format: (key: count)
+function convert(data) {
+    const keyMap = {0: 'C', 1: 'C#', 2: 'D', 3: 'D#', 4: 'E', 5: 'F', 6: 'F#', 7: 'G', 8: 'G#', 9: 'A', 10: 'A#', 11: 'B'};
+    let arr = [];
+    for (let i = 0; i < 12; i++) {
+        arr.push({index: i, key: keyMap[i], count: data[i]});
+    }
+    // count: 4180
+    // index: 2
+    // key: "D"
+    return arr;
+}
+
+const barWrapper = d3.select('#barDiv');
+const barSvg = barWrapper.append('svg');
+barSvg.attr('width', barWidth);
+barSvg.attr('height', barHeight);
+
+function drawBarChart(mode, dataset) {
+    barSvg.selectAll("*").remove();
+
+    // d3.csv('data.csv')
+    // .then((dataset) => {
+        const filteredDataset = (mode === "major") 
+            ? dataset.filter(data => data['mode'] === '1')
+            : dataset.filter(data => data['mode'] === '0');
+
+        // Create map for storing count.
+        let keyCounts = {};
+        filteredDataset.forEach(data => {
+            const key = data['key'];
+            if (key in keyCounts) {
+                keyCounts[key]++;
+            } else {
+                keyCounts[key] = 1;
+            }
+        });
+
+        const newData = convert(keyCounts);
+
+        const xMin = d3.min(newData, (d) => d['index']);
+        const xMax = d3.max(newData, (d) => d['index']);
+        const xBarScale = d3.scaleLinear()
+            .domain([xMin, xMax])
+            .range([barMargin, barBounded.width]);
+
+        const yMin = 0;
+        const yMax = d3.max(newData, (d) => d['count']);
+        const yBarScale = d3.scaleLinear()
+            .domain([yMin, yMax])
+            .range([barBounded.height, barMargin]);
+
+        const group = barSvg.append('g') // append a group for our visualisations
+            .style('transform', `translate(${barMargin}px, ${barMargin}px)`); // bounded
+        
+        const xAxis = d3.axisBottom(xBarScale)
+            .tickFormat(function(d) { return newData[d].key; });
+        const yAxis = d3.axisRight(yBarScale)
+
+        const smallBarWidth = 5;
+
+        group.selectAll('whatever')
+            .data(newData)
+            .enter()
+            .append('rect')
+            .attr('x', d => xBarScale(d.index))
+            .attr('y', d => yBarScale(d.count))
+            .attr('width', smallBarWidth)
+            .attr('height', (d) => {
+                // console.log(d);
+                // console.log(xBarScale(d.index));
+                // console.log(yBarScale(d.count));
+                return (barBounded.height - yBarScale(d.count));
+            })
+            .style('fill', 'lightsalmon');
+
+        // Add our axes!
+        group.append('g')
+            .attr('class', 'x axis')    // TODO: add this x axis.
+            .call(xAxis)
+            .style('transform', `translateY(${barBounded.height}px)`)
+
+        group.append('g')
+            .attr('class', 'y axis') // TODO: add this y axis.
+            .call(yAxis)
+            .attr('transform', `translate(${barMargin},0)`)
+    // });
+}
+
+function chooseMode(mode) {
+    d3.csv('data.csv')
+    .then((dataset) => {
+        // DOM changes
+        if (mode === 'major') {
+            document.getElementById("majorMode").style.backgroundColor = "pink";
+            document.getElementById("minorMode").style.backgroundColor = "rgb(239, 239, 239)";
+        } else {
+            document.getElementById("majorMode").style.backgroundColor = "rgb(239, 239, 239)";
+            document.getElementById("minorMode").style.backgroundColor = "pink";
+        }
+        drawBarChart(mode, dataset);
+    });
+}
+
+chooseMode('major');
+    </script>
+
+</html> 
